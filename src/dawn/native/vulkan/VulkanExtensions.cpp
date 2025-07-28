@@ -61,6 +61,7 @@ static constexpr std::array<InstanceExtInfo, kInstanceExtCount> sInstanceExtInfo
     {InstanceExt::XcbSurface, "VK_KHR_xcb_surface", NeverPromoted},
     {InstanceExt::XlibSurface, "VK_KHR_xlib_surface", NeverPromoted},
     {InstanceExt::AndroidSurface, "VK_KHR_android_surface", NeverPromoted},
+    {InstanceExt::OHOSSurface, "VK_OHOS_surface", NeverPromoted},
 
     {InstanceExt::DebugUtils, "VK_EXT_debug_utils", NeverPromoted},
     {InstanceExt::ValidationFeatures, "VK_EXT_validation_features", NeverPromoted},
@@ -114,6 +115,7 @@ InstanceExtSet EnsureDependencies(const InstanceExtSet& advertisedExts) {
                 break;
 
             case InstanceExt::AndroidSurface:
+            case InstanceExt::OHOSSurface:
             case InstanceExt::FuchsiaImagePipeSurface:
             case InstanceExt::MetalSurface:
             case InstanceExt::WaylandSurface:
@@ -198,6 +200,7 @@ static constexpr std::array<DeviceExtInfo, kDeviceExtCount> sDeviceExtInfos{{
     {DeviceExt::ExternalMemoryHost, "VK_EXT_external_memory_host", NeverPromoted},
     {DeviceExt::ExternalSemaphoreFD, "VK_KHR_external_semaphore_fd", NeverPromoted},
     {DeviceExt::ExternalSemaphoreZirconHandle, "VK_FUCHSIA_external_semaphore", NeverPromoted},
+    {DeviceExt::ExternalMemoryOHNativeBuffer, "VK_OHOS_external_memory", NeverPromoted},
     //
 }};
 
@@ -319,6 +322,7 @@ DeviceExtSet EnsureDependencies(const DeviceExtSet& advertisedExts,
             case DeviceExt::ExternalMemoryZirconHandle:
             case DeviceExt::ExternalMemoryHost:
             case DeviceExt::QueueFamilyForeign:
+            case DeviceExt::ExternalMemoryOHNativeBuffer:
                 hasDependencies = HasDep(DeviceExt::ExternalMemory);
                 break;
 

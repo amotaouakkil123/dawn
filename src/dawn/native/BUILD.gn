@@ -436,6 +436,13 @@ source_set("sources") {
     ]
   }
 
+  if (is_ohos) {
+    sources += [
+      "OHOSFunctions.cpp",
+      "OHOSFunctions.h",
+    ]
+  }
+
   # Only win32 app needs to link with user32.lib
   # In UWP, all available APIs are defined in WindowsApp.lib
   if (is_win && !dawn_is_winuwp) {
@@ -903,7 +910,7 @@ source_set("sources") {
       "vulkan/external_semaphore/SemaphoreServiceImplementation.h",
     ]
 
-    if (is_android || is_linux || is_chromeos) {
+    if (is_android || is_linux || is_chromeos || is_ohos) {
       sources += [
         "vulkan/external_semaphore/SemaphoreServiceImplementationFD.cpp",
         "vulkan/external_semaphore/SemaphoreServiceImplementationFD.h",
@@ -912,6 +919,11 @@ source_set("sources") {
         sources += [
           "vulkan/external_memory/MemoryServiceImplementationAHardwareBuffer.cpp",
           "vulkan/external_memory/MemoryServiceImplementationAHardwareBuffer.h",
+        ]
+      } else if (is_ohos) {
+        sources += [
+          "vulkan/external_memory/MemoryServiceImplementationOHNativeBuffer.cpp",
+          "vulkan/external_memory/MemoryServiceImplementationOHNativeBuffer.h"
         ]
       } else if (is_linux || is_chromeos) {
         sources += [

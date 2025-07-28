@@ -36,6 +36,9 @@
 #if DAWN_PLATFORM_IS(ANDROID)
 #include <android/log.h>
 #endif
+#if DAWN_PLATFORM_IS(OHOS)
+#include <hilog/log.h>
+#endif
 #if DAWN_PLATFORM_IS(WINDOWS)
 #include "dawn/common/windows_with_undefs.h"
 #endif
@@ -82,6 +85,24 @@ android_LogPriority AndroidLogPriority(LogSeverity severity) {
 
 }  // anonymous namespace
 
+#if DAWN_PLATFORM_IS(OHOS)
+LogLevel OhosLogPriority(LogSeverity severity) {
+    switch(severity) {
+        case LogSeverity::Debug:
+            return LOG_DEBUG;
+        case LogSeverity::Info:
+            return LOG_INFO;
+        case LogSeverity::Warning:
+            return LOG_WARN;
+        case LogSeverity::Error:
+            return LOG_ERROR;
+        default:
+            DAWN_UNREACHABLE();
+            return LOG_ERROR;
+    }
+}
+#endif  // DAWN_PLATFORM_IS(OHOS)
+
 LogMessage::LogMessage(LogSeverity severity) : mSeverity(severity) {}
 
 LogMessage::LogMessage(LogMessage&& other) = default;
@@ -109,7 +130,11 @@ LogMessage::~LogMessage() {
 #if DAWN_PLATFORM_IS(ANDROID)
     android_LogPriority androidPriority = AndroidLogPriority(mSeverity);
     __android_log_print(androidPriority, "Dawn", "%s: %s\n", severityName, fullMessage.c_str());
-#else  // DAWN_PLATFORM_IS(ANDROID)
+#elif DAWN_PLATFORM_IS(OHOS)
+    auto ohosPriority = OhosLogPriority(mSeverity);
+    OH_LOG_PRINT(LOG_APP, ohosPriority, LOG_DOMAIN, "Dawn", "%{public}s: %{public}s", severityName,
+                 fullMessage.c_str());
+#else
     FILE* outputStream = stdout;
     if (mSeverity == LogSeverity::Warning || mSeverity == LogSeverity::Error) {
         outputStream = stderr;

@@ -175,6 +175,12 @@ HandleType* AsVkArray(detail::VkHandle<Tag, HandleType>* handle) {
 #endif
 #endif  // DAWN_PLATFORM_IS(ANDROID)
 
+#if DAWN_PLATFORM_IS(OHOS)
+#ifndef VK_USE_PLATFORM_OHOS
+#define VK_USE_PLATFORM_OHOS
+#endif
+#endif
+
 #if DAWN_PLATFORM_IS(FUCHSIA)
 #ifndef VK_USE_PLATFORM_FUCHSIA
 #define VK_USE_PLATFORM_FUCHSIA

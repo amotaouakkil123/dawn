@@ -78,6 +78,14 @@ ExternalImageExportInfoAHardwareBuffer::ExternalImageExportInfoAHardwareBuffer()
     : ExternalImageExportInfoFD(ExternalImageType::AHardwareBuffer) {}
 #endif
 
+#if DAWN_PLATFORM_IS(OHOS)
+ExternalImageDescriptorOHNativeBuffer::ExternalImageDescriptorOHNativeBuffer()
+    : ExternalImageDescriptorVk(ExternalImageType::OHNativeBuffer) {}
+
+ExternalImageExportInfoOHNativeBuffer::ExternalImageExportInfoOHNativeBuffer()
+    : ExternalImageExportInfoFD(ExternalImageType::OHNativeBuffer) {}
+#endif
+
 WGPUTexture WrapVulkanImage(WGPUDevice device, const ExternalImageDescriptorVk* descriptor) {
     Device* backendDevice = ToBackend(FromAPI(device));
     auto deviceGuard = backendDevice->GetGuard();
@@ -90,6 +98,13 @@ WGPUTexture WrapVulkanImage(WGPUDevice device, const ExternalImageDescriptorVk* 
                 ahbDescriptor, ahbDescriptor->handle, ahbDescriptor->waitFDs);
             return ToAPI(ReturnToAPI(std::move(texture)));
         }
+#elif DAWN_PLATFORM_IS(OHOS)
+        case ExternalImageType::OHNativeBuffer:
+            const ExternalImageDescriptorOHNativeBuffer* ohnbDescriptor =
+                static_cast<const ExternalImageDescriptorOHNativeBuffer*>(descriptor);
+            Ref<TextureBase> texture = backendDevice->CreateTextureWrappingVulkanImage(
+                ohnbDescriptor, ohnbDescriptor->handle, ohnbDescriptor->waitFDs);
+            return ToAPI(ReturnToAPI(std::move(texture)));
 #elif DAWN_PLATFORM_IS(LINUX)
         case ExternalImageType::OpaqueFD:
         case ExternalImageType::DmaBuf: {
@@ -115,9 +130,10 @@ bool ExportVulkanImage(WGPUTexture texture,
     Texture* backendTexture = ToBackend(FromAPI(texture));
     Device* device = ToBackend(backendTexture->GetDevice());
     auto deviceGuard = device->GetGuard();
-#if DAWN_PLATFORM_IS(ANDROID) || DAWN_PLATFORM_IS(LINUX)
+#if DAWN_PLATFORM_IS(ANDROID) || DAWN_PLATFORM_IS(LINUX) || DAWN_PLATFORM_IS(OHOS)
     switch (info->GetType()) {
         case ExternalImageType::AHardwareBuffer:
+        case ExternalImageType::OHNativeBuffer:
         case ExternalImageType::OpaqueFD:
         case ExternalImageType::DmaBuf: {
             ExternalImageExportInfoFD* fdInfo = static_cast<ExternalImageExportInfoFD*>(info);

@@ -224,6 +224,12 @@ MaybeError VulkanFunctions::LoadInstanceProcs(VkInstance instance,
     }
 #endif  // DAWN_PLATFORM_IS(ANDROID)
 
+#if DAWN_PLATFORM_IS(OHOS)
+    if (globalInfo.HasExt(InstanceExt::OHOSSurface)) {
+        GET_INSTANCE_PROC(CreateSurfaceOHOS);
+    }
+#endif  // DAWN_PLATFORM_IS(OHOS)
+
 #if defined(DAWN_USE_X11)
     if (globalInfo.HasExt(InstanceExt::XlibSurface)) {
         GET_INSTANCE_PROC(CreateXlibSurfaceKHR);
@@ -434,6 +440,13 @@ MaybeError VulkanFunctions::LoadDeviceProcs(VkInstance instance,
         GET_DEVICE_PROC(GetMemoryAndroidHardwareBufferANDROID);
     }
 #endif  // DAWN_PLATFORM_IS(ANDROID)
+
+#if DAWN_PLATFORM_IS(OHOS)
+    if (deviceInfo.HasExt(DeviceExt::ExternalMemoryOHNativeBuffer)) {
+        GET_DEVICE_PROC(GetNativeBufferPropertiesOHOS);
+        GET_DEVICE_PROC(GetMemoryNativeBufferOHOS);
+    }
+#endif  // DAWN_PLATFORM_IS(OHOS)
 
     return {};
 }

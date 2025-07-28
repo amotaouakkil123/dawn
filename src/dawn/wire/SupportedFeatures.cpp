@@ -51,6 +51,7 @@ bool IsFeatureSupported(WGPUFeatureName feature) {
         // device creation failure that would otherwise occur.
         case WGPUFeatureName_SharedTextureMemoryVkDedicatedAllocation:
         case WGPUFeatureName_SharedTextureMemoryAHardwareBuffer:
+        case WGPUFeatureName_SharedTextureMemoryOHNativeBuffer:
         case WGPUFeatureName_SharedTextureMemoryDmaBuf:
         case WGPUFeatureName_SharedTextureMemoryOpaqueFD:
         case WGPUFeatureName_SharedTextureMemoryZirconHandle:

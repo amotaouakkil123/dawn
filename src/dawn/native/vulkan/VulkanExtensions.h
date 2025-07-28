@@ -52,6 +52,7 @@ enum class InstanceExt {
     XcbSurface,
     XlibSurface,
     AndroidSurface,
+    OHOSSurface,
 
     // Others
     DebugUtils,

@@ -232,6 +232,7 @@
             "SurfaceSourceXlibWindow",
             "SurfaceSourceWaylandSurface",
             "SurfaceSourceAndroidNativeWindow",
+            "SurfaceSourceOHNativeWindow",
             "SurfaceSourceXCBWindow"
         ],
         "client_side_commands": [

@@ -49,6 +49,8 @@ const ExternalSemaphoreHandle kNullExternalSemaphoreHandle = -1;
 // ExternalMemoryHandle
 #if DAWN_PLATFORM_IS(ANDROID)
 using ExternalMemoryHandle = struct AHardwareBuffer*;
+#elif DAWN_PLATFORM_IS(OHOS)
+using ExternalMemoryHandle = struct ::OH_NativeBuffer*;
 #elif DAWN_PLATFORM_IS(LINUX)
 using ExternalMemoryHandle = int;
 #elif DAWN_PLATFORM_IS(FUCHSIA)

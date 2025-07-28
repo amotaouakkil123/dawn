@@ -32,6 +32,7 @@
 #include <utility>
 
 #include "dawn/common/Compiler.h"
+#include "dawn/common/Log.h"
 #include "dawn/native/ChainUtils.h"
 #include "dawn/native/Instance.h"
 #include "dawn/native/Surface.h"
@@ -303,7 +304,7 @@ ResultOrError<SwapChain::Config> SwapChain::ChooseConfig(
     config.transform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
 
     config.alphaMode = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-#if !DAWN_PLATFORM_IS(ANDROID)
+#if !DAWN_PLATFORM_IS(ANDROID) && !DAWN_PLATFORM_IS(OHOS)
     DAWN_INVALID_IF(
         (surfaceInfo.capabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR) == 0,
         "Vulkan SwapChain must support opaque alpha.");
@@ -664,6 +665,31 @@ ResultOrError<VkSurfaceKHR> CreateVulkanSurface(InstanceBase* instance,
         }
 
 #endif  // DAWN_PLATFORM_IS(ANDROID)
+
+#if DAWN_PLATFORM_IS(OHOS)
+
+        case Surface::Type::OHNativeWindow: {
+            if (info.HasExt(InstanceExt::OHOSSurface)) {
+                DAWN_ASSERT(surface->GetOHNativeWindow() != nullptr);
+
+                VkSurfaceCreateInfoOHOS createInfo;
+                createInfo.sType = VK_STRUCTURE_TYPE_SURFACE_CREATE_INFO_OHOS;
+                createInfo.pNext = nullptr;
+                createInfo.flags = 0;
+                createInfo.window =
+                    static_cast<OHNativeWindow*>(surface->GetOHNativeWindow());
+                
+                VkSurfaceKHR vkSurface = VK_NULL_HANDLE;
+                DAWN_TRY(CheckVkSuccess(
+                         fn.CreateSurfaceOHOS(vkInstance, &createInfo, nullptr, &*vkSurface),
+                         "CreateSurfaceOHOS"));
+                return vkSurface;
+            }
+
+            break;
+        }
+
+#endif
 
 #if defined(DAWN_USE_WAYLAND)
         case Surface::Type::WaylandSurface: {

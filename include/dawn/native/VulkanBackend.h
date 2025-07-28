@@ -159,6 +159,26 @@ struct DAWN_NATIVE_EXPORT ExternalImageExportInfoAHardwareBuffer : ExternalImage
 
 #endif  // __ANDROID__
 
+#if defined(__OHOS__)
+
+// Descriptor for OHNativeBuffer image import
+struct DAWN_NATIVE_EXPORT ExternalImageDescriptorOHNativeBuffer : ExternalImageDescriptorVk {
+  public:
+    ExternalImageDescriptorOHNativeBuffer();
+
+    struct OH_NativeBuffer* handle; // The OH_NativeBuffer which contains the memory of the image
+    std::vector<int> waitFDs;       // File descriptors of semaphores which will be waited on
+
+  protected:
+    using ExternalImageDescriptorVk::ExternalImageDescriptorVk;
+};
+
+struct DAWN_NATIVE_EXPORT ExternalImageExportInfoOHNativeBuffer : ExternalImageExportInfoFD {
+  ExternalImageExportInfoOHNativeBuffer();
+};
+
+#endif  // defined(__OHOS__) 
+
 #endif  // defined(__linux__) || defined(__Fuchsia__)
 
 // Imports external memory into a Vulkan image. Internally, this uses external memory /

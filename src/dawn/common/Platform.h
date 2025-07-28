@@ -65,6 +65,8 @@
 #define DAWN_PLATFORM_IS_POSIX 1
 #if defined(__ANDROID__)
 #define DAWN_PLATFORM_IS_ANDROID 1
+#if defined(__OHOS__)
+#define DAWN_PLATFORM_IS_OHOS 1
 #elif defined(DAWN_OS_CHROMEOS)
 #define DAWN_PLATFORM_IS_CHROMEOS 1
 #else
@@ -217,6 +219,9 @@ static_assert(sizeof(sizeof(char)) == 4, "Expect sizeof(size_t) == 4");
 #endif
 #if !defined(DAWN_PLATFORM_IS_ANDROID)
 #define DAWN_PLATFORM_IS_ANDROID 0
+#endif
+#if !defined(DAWN_PLATFORM_IS_OHOS)
+#define DAWN_PLATFORM_IS_OHOS 0
 #endif
 #if !defined(DAWN_PLATFORM_IS_CHROMEOS)
 #define DAWN_PLATFORM_IS_CHROMEOS 0

@@ -1944,6 +1944,16 @@
             {"name": "use external format", "type" : "bool"}
         ]
     },
+    "shared texture memory o h native buffer descriptor": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["shared texture memory descriptor"],
+        "tags": ["dawn", "native"],
+        "members": [
+            {"name": "handle", "type": "void *"},
+            {"name": "use external format", "type": "bool"}
+        ]
+    },
     "shared texture memory dma buf plane": {
         "category": "structure",
         "tags": ["dawn", "native"],
@@ -2344,7 +2354,8 @@
             {"value": 56, "name": "shared fence EGL sync", "tags": ["dawn", "native"]},
             {"value": 57, "name": "dawn device allocator control", "tags": ["dawn"]},
             {"value": 58, "name": "texture component swizzle", "tags": ["dawn"]},
-            {"value": 59, "name": "chromium experimental primitive id", "tags": ["dawn"]}
+            {"value": 59, "name": "chromium experimental primitive id", "tags": ["dawn"]},
+            {"value": 60, "name": "shared texture memory o h native buffer", "tags": ["dawn", "native"]}
         ]
     },
     "filter mode": {
@@ -3665,6 +3676,15 @@
             {"name": "window", "type": "void *"}
         ]
     },
+    "surface source o h native window": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["surface descriptor"],
+        "tags": ["art", "native"],
+        "members": [
+            {"name": "window", "type": "void *"}
+        ]
+    },
     "emscripten surface source canvas HTML selector": {
         "category": "structure",
         "chained": "in",
@@ -3900,7 +3920,9 @@
             {"value": 70, "name": "dawn fake device initialize error for testing", "tags": ["dawn"]},
             {"value": 71, "name": "texture component swizzle descriptor", "tags": ["dawn"]},
             {"value": 72, "name": "shared texture memory D3D11 begin state", "tags": ["dawn", "native"]},
-            {"value": 73, "name": "dawn consume adapter descriptor", "tags": ["dawn"]}
+            {"value": 73, "name": "dawn consume adapter descriptor", "tags": ["dawn"]},
+            {"value": 74, "name": "shared teture memory o h native buffer descriptor", "tags": ["dawn", "native"]},
+            {"value": 75, "name": "surface source o h native window"}
         ]
     },
     "texture": {

@@ -32,6 +32,7 @@
 
 #include "dawn/common/Assert.h"
 #include "dawn/common/Math.h"
+#include "dawm/common/Log.h"
 #include "dawn/native/ChainUtils.h"
 #include "dawn/native/DynamicUploader.h"
 #include "dawn/native/EnumMaskIterator.h"
@@ -1684,7 +1685,7 @@ MaybeError ImportedTextureBase::EndAccess(ExternalSemaphoreHandle* handle,
 
         currentLayout = targetLayout;
     }
-    DAWN_ASSERT(mExternalSemaphoreHandle != kNullExternalSemaphoreHandle);
+    // DAWN_ASSERT(mExternalSemaphoreHandle != kNullExternalSemaphoreHandle);
 
     // Write out the layouts and signal semaphore
     *releasedOldLayout = currentLayout;

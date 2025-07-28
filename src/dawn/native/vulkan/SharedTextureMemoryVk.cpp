@@ -31,6 +31,7 @@
 #include <utility>
 #include <vector>
 
+#include "dawn/common/Log.h"
 #include "dawn/native/ChainUtils.h"
 #include "dawn/native/Instance.h"
 #include "dawn/native/SystemHandle.h"
@@ -49,6 +50,11 @@
 
 #include "dawn/native/AHBFunctions.h"
 #endif  // DAWN_PLATFORM_IS(ANDROID)
+
+#if DAWN_PLATFORM_IS(OHOS)
+#include <native_buffer/native_buffer.h>
+#include "dawn/native/OHOSFunctions.h"
+#endif  // DAWN_PLATFORM_IS(OHOS)
 
 namespace dawn::native::vulkan {
 
@@ -730,6 +736,257 @@ ResultOrError<Ref<SharedTextureMemory>> SharedTextureMemory::Create(
 ResultOrError<Ref<SharedTextureMemory>> SharedTextureMemory::Create(
     Device* device,
     StringView label,
+    const SharedTextureMemoryOHNativeBufferDescriptor* descriptor) {
+#if DAWN_PLATFORM_IS(OHOS)
+    const auto* ohosFunctions =
+        ToBackend(device->GetAdapter()->GetPhysicalDevice())->GetOrLoadOHOSFunctions();
+    VkDevice vkDevice = device->GetVkDevice();
+
+    auto* ohnbBuffer = static_cast<struct OH_NativeBuffer*>(descriptor->handle);
+    bool useExternalFormat = descriptor->useExternalFormat;
+
+    const VkExternalMemoryHandleTypeFlagBits handleType =
+        VK_EXTERNAL_MEMORY_HANDLE_TYPE_OHOS_NATIVE_BUFFER_BIT_OHOS;
+
+    // Reflect the peroperties of the OH_NativeBuffer
+    OH_NativeBuffer_Config ohnbConfig{};
+    ohosFunctions->GetConfig(ohnbBuffer, &ohnbConfig);
+
+    SharedTextureMemoryProperties properties;
+    properties.size = {static_cast<uint32_t>(ohnbConfig.width),
+                       static_cast<uint32_t>(ohnbConfig.height), 1u};
+
+    if (useExternalFormat) {
+        if (ohnbConfig.usage & NATIVEBUFFER_USAGE_HW_TEXTURE) {
+            properties.usage = wgpu::TextureUsage::TextureBinding;
+        }
+    } else {
+        properties.usage = wgpu::TextureUsage::CopySrc | wgpu::TextureUsage::CopyDst;
+        if (ohnbConfig.usage & NATIVEBUFFER_USAGE_HW_RENDER) {
+            properties.usage |= wgpu::TextureUsage::RenderAttachment;
+            // OHNativeBuffer doesn't have storage, however StorageBinding works.
+            properties.usage |= wgpu::TextureUsage::StorageBinding;
+        }
+        if (ohnbConfig.usage & NATIVEBUFFER_USAGE_HW_TEXTURE) {
+            properties.usage |= wgpu::TextureUsage::TextureBinding;
+        }
+    }
+
+    VkFormat vkFormat;
+    YCbCrVkDescriptor yCbCrOHOSInfo;
+    SampleTypeBit externalSampleType;
+    VkNativeBufferPropertiesOHOS bufferProperties = {
+        .sType = VK_STRUCTURE_TYPE_NATIVE_BUFFER_PROPERTIES_OHOS,
+    };
+
+    VkExternalFormatOHOS externalFormatOHOS = {
+        .sType = VK_STRUCTURE_TYPE_EXTERNAL_FORMAT_OHOS,
+    };
+
+    // Query the properties to find the appropriate VkFormat and memory type.
+    {
+        VkNativeBufferFormatPropertiesOHOS bufferFormatProperties;
+        PNextChainBuilder bufferPropertiesChain(&bufferProperties);
+        bufferPropertiesChain.Add(&bufferFormatProperties,
+                                  VK_STRUCTURE_TYPE_NATIVE_BUFFER_FORMAT_PROPERTIES_OHOS);
+
+        DAWN_TRY(CheckVkSuccess(
+            device->fn.GetNativeBufferPropertiesOHOS(vkDevice, ohnbBuffer, &bufferProperties),
+            "vkGetNativeBufferPropertiesOHOS"));
+
+        if (useExternalFormat) {
+            DAWN_INVALID_IF(
+                bufferFormatProperties.externalFormat == 0,
+                "OH_NativeBuffer with external sampler must have non-zero external format.");
+            
+            vkFormat = VK_FORMAT_UNDEFINED;
+            externalFormatOHOS.externalFOrmat = bufferFormatProperties.externalFormat;
+            properties.format = wgpu::TextureFormat::External;
+        } else {
+            vkFormat = bufferFormatProperties.format;
+            externalFormatOHOS.externalFormat = 0;
+            DAWN_TRY_ASSIGN(properties.format, FormatFromVkFormat(device, vkFormat));
+        }
+
+        // Populate the YCbCr
+        yCbCrOHOSInfo.externalFormat = externalFormatOHOS.externalFormat;
+        yCbCrOHOSInfo.vkFormat = vkFormat;
+        yCbCrOHOSInfo.vkYCbCrModel = bufferFormatProperties.suggestedYcbcrModel;
+        yCbCrOHOSInfo.vkYCbCrRange = bufferFormatPropeties.suggestedYcbcrRange;
+        yCbCrOHOSInfo.vkComponentSwizzleRed =
+            bufferFormatProperties.samplerYcbcrConversionComponents.r;
+        yCbCrOHOSInfo.vkComponentSwizzleGreen = 
+            bufferFormatProperties.samplerYcbcrConversionComponents.g;
+        yCbCrOHOSInfo.vkComponentSwizzleBlue = 
+            bufferFormatProperties.samplerYcbcrConversionComponents.b;
+        yCbCrOHOSInfo.vkComponentSwizzleAlpha =
+            bufferFormatProperties.samplerYcbcrConversionComponents.a;
+        yCbCrOHOSInfo.vkXChromaOffset = bufferFormatProperties.suggestedXChromaOffset;
+        yCbCrOHOSInfo.vkYChromaOffset = bufferFormatProperties.suggestedYChromaOffset;
+
+        uint32_t formatFeatures = bufferFormatProperties.formatFeatures;
+        if (formatFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_YCBCR_CONVERSION_LINEAR_FILTER_BIT) {
+            yCbCrOHOSInfo.vkChromaFilter = wgpu::FilterMode::Linear;
+            externalSampleType = SampleTypeBit::UnfilterableFloat | SampleTypeBit::Float;
+        } else {
+            yCbCrOHOSInfo.vkChromaFilter = wgpu::FilterMode::Nearest;
+            externalSampleType = SampleTypeBit::UnfilterableFloat;
+        }
+
+        yCbCrOHOSInfo.forceExplicitReconstruction =
+            formatFeatures &
+            VK_FORMAT_FEATURE_SAMPLED_IMAGE_YCBCR_CONVERSION_LINEAR_CHROMA_RECONSTRUCTION_EXPLICIT_BIT;
+    }
+
+    const Format* internalFormat = nullptr;
+    DAWN_TRY_ASSIGN(internalFormat->IsMultiPlanar(),
+                    "Multi-planar OH_NativeBuffer not supported yet.");
+
+    // Create the SharedTextureMemory object
+    Ref<SharedTextureMemory> sharedTextureMemory =
+        SharedTextureMemory::Create(device, label, properties, VK_QUEUE_FAMILY_FOREIGN_EXT);
+    
+    sharedTextureMemory->mYCbCrOHOSInfo = yCbCrOHOSInfo;
+    sharedTextureMemory->GetContents()->SetExternalFormatSupportedSampleTypes(externalSampleType);
+
+    // Reflect properties to reify them.
+    sharedTextureMemory->APIGetProperties(&properties);
+
+    // Compute the Vulkan usage flags to create the image with.
+    VkImageUsageFlags vkUsageFlags = VulkanImageUsage(device, properties.usage, *internalFormat);
+    const auto& compatibleViewFormats = device->GetCompatibleViewFormats(*internalFormat);
+
+    // Info describing the image import. We will use this to check if the import is valid.
+    // Then we perform the VkImage creation.
+    VkPhysicalDeviceImageFormatInfo2 imageFormatInfo = {};
+    // List of view formats the image can be created from.
+    std::array<VkFormat, 2> viewFormats;
+    VkImageFormatListCreateInfo imageFormatListInfo = {};
+    imageFormatListInfo.sType = VK_STRUCTURE_TYPE_IMAGE_FORMAT_LIST_CREATE_INFO;
+
+    // Validate that the import is valid
+    {
+        // Verify that the format modifier of the external memory and the requested Vulkan format
+        // are actually supported together in a OHOS import.
+        imageFormatInfo.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_FORMAT_INFO_2;
+        imageFormatInfo.format = vkFormat;
+        imageFormatInfo.type = VK_IMAGE_TYPE_2D;
+        imageFormatInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+        imageFormatInfo.usage = vkUsageFlags;
+        imageFormatInfo.flags = 0;
+
+        if (!useExternalFormat) {
+            constexpr wgpu::TextureUsage kUsageRequiringView = 
+                wgpu::TextureUsage::RenderAttachment |
+                wgpu::TextureUsage::TextureBinding |
+                wgpu::TextureUsage::StorageBinding;
+            const bool mayNeedViewReinterpretation =
+                (properties.usage & kUsageRequiringView) != 0 && !compatibleViewFormats.empty();
+            const bool needsRGBA8UnormStoragePolyfill =
+                properties.format == wgpu::TextureFormat::BGRA8Unorm &&
+                (properties.usage & wgpu::TextureUsage::StorageBinding);
+            if (mayNeedViewReinterpretation || needsBGRA8UnormStoragePolyfill) {
+                // Add the mutable format bit for view reinterpretation.
+                imageFormatInfo.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
+
+                if (properties.usage & wgpu::TextureUsage::StorageBinding) {
+                    // Don't use an image format list because it becomes impossible to make an
+                    // rgba8unorm storage texture which may be reinterpreted as rgba8unorm-srgb,
+                    // because the srgb format doesn't support storage. Creation with an explicit
+                    // format list that includes srgb will fail.
+                    // This is the same issue seen with the DMA buf import path which has a 
+                    // workaround to bypass the support check.
+                } else if (device->GetDeviceInfo().HasExt(DeviceExt::ImageFormatList)) {
+                    // Set the list of view formats the image can be compatible with.
+                    DAWN_ASSERT(compatibleViewFormats.size() == 1u);
+                    viewFormats[0] = vkFormat;
+                    viewFormats[1] = VulkanImageFormat(device, comptaibleViewFormats[0]->format);
+                    imageFormatListInfo.viewFormatCount = 2;
+                    imageFormatListInfo.pViewFormats = viewFormats.data();
+                }
+            }
+
+            if (imageFormatListInfo.viewFormatCount > 0) {
+                DAWN_TRY_CONTEXT(
+                    CheckExternalImageFormatSupport(device, properties, &imageFormatInfo,
+                                                    handleType, &imageFormatListInfo),
+                                                    "Checking import support of OHOS Hardware Buffer");
+            } else {
+                DAWN_TRY_CONTEXT(CheckExternalImageFormatSupport(device, properties, &imageFormatInfo,
+                                                                 handleType),
+                                                                 "Checking import support of OHOS Hardware Buffer");
+            }
+        }
+    }
+
+    // Create the VkImage for the import
+    {
+        VkImage vkImage;
+        DAWN_TRY_ASSIGN(vkImage,
+                        CreateExternalVkImage(device, properties, imageFormatInfo, handleType,
+                                              &imageFormatListInfo, &externalFormatOHOS));
+        sharedTextureMemory->mVkImage =
+            AcquireRef(new RefCountedVkHandle<VkImage>(device, vkImage));
+    }
+
+    // Import the memory as VkDeviceMemory and bind to the vkImage
+    {
+        // Choose the best memory type that satisfies the import's constraint
+        VkMemoryRequirements memoryRequirements;
+        memoryRequirements.memoryTypeBits = bufferProperties.memoryTypeBits;
+        int memoryTypeIndex = device->GetResourceMemoryAllocator()->FindBestTypeIndex(
+            memoryRequirements, MemoryKind::DeviceLocal);
+        DAWN_INVALID_IF(memoryTypeIndex == -1,
+                        "Unable to find an appropriate memory type for import.");
+
+        VkMemoryAllocateInfo memoryAllocateInfo = {};
+        memoryAllocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        memoryAllocateInfo.allocationSize = bufferProperties.allocationSize;
+        memoryAllocateInfo.memoryTypeIndex = memoryTypeIndex;
+
+        VkImportNativeBufferInfoOHOS importMemoryOHOSInfo = {};
+        importMemoryOHOSInfo.sType = VK_STRUCTURE_TYPE_IMPORT_NATIVE_BUFFER_INFO_OHOS;
+        importMemoryOHOSInfo.buffer = ohnbBuffer;
+
+        // OH_NativeBuffer imports must use dedicated allocations.
+        VkMemoryDedicatedAllocateInfo dedicatedAllocateInfo;
+        dedicatedAllocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO;
+        dedicatedAllocateInfo.image = sharedTextureMemory->mVkImage->Get();
+        dedicatedAllocateInfo.buffer = VkBuffer{};
+
+        // Import the OH_NativeBuffer as VkDeviceMemory
+        VkDeviceMemory vkDeviceMemory;
+        DAWN_TRY_ASSIGN(vkDeviceMemory,
+                        AllocateDeviceMemory(device, &memoryAllocateInfo, &dedicatedAllocateInfo,
+                                             &importMemoryOHOSInfo));
+        sharedTextureMemory->mVkDeviceMemory =
+            AcquireRef(new RefCountedVkHandle<VkDeviceMemory>(device, vkDeviceMemory));
+        
+        // Bind the VkImage to the memory.
+        DAWN_TRY(CheckVkSuccess(
+                 device->fn.BindImageMemory(vkDevice, sharedTextureMemory->mVkImage->Get(),
+                                            sharedTextureMemory->mVkDeviceMemory->Get(), 0),
+                                            "vkBindImageMemory"));
+        
+        // Verify the texture memory requirements fit within the constraints of the OH_NativeBuffer
+        device->fn.GetImageMemoryRequirements(vkDevice, sharedTextureMemory->mVkImage->Get(),
+                                              &memoryRequirements);
+        DAWN_INVALID_IF((memoryRequirements.memoryTypeBits & bufferProperties.memoryTypeBits) == 0,
+                         "Required memory type bits (%u) do not overlap with OH_NativeBuffer memory"
+                         "type bits (%u).",
+                         memoryRequirements.memoryTypeBits, bufferProperties.memoryTypeBits);
+    }
+
+    return sharedTextureMemory;
+#else
+    DAWN_UNREACHABLE();
+#endif  // DAWN_PLATFORM_IS(OHOS)
+}
+
+// static
+ResultOrError<Ref<SharedTextureMemory>> SharedTextureMemory::Create(
+    Device* device,
+    StringView label,
     const SharedTextureMemoryOpaqueFDDescriptor* descriptor) {
 #if DAWN_PLATFORM_IS(POSIX)
     VkDevice vkDevice = device->GetVkDevice();
@@ -1070,6 +1327,10 @@ ResultOrError<FenceAndSignalValue> SharedTextureMemory::EndAccessImpl(
     if (GetDevice()->HasFeature(Feature::SharedFenceSyncFD)) {
         SharedFenceSyncFDDescriptor desc;
         desc.handle = handle.Get();
+
+        if (handle.Get() < 0) {
+            return FenceAndSignalValue({}, std::numeric_limits<uint64_t>::max());
+        }
 
         DAWN_TRY_ASSIGN(fence,
                         SharedFence::Create(ToBackend(GetDevice()), "Internal VkSemaphore", &desc));

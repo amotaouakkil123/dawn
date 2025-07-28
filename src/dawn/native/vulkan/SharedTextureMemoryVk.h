@@ -50,6 +50,11 @@ class SharedTextureMemory final : public SharedTextureMemoryBase {
     static ResultOrError<Ref<SharedTextureMemory>> Create(
         Device* device,
         StringView label,
+        const SharedTextureMemoryOHNativeBufferDescriptor* descriptor);
+
+    static ResultOrError<Ref<SharedTextureMemory>> Create(
+        Device* device,
+        StringView label,
         const SharedTextureMemoryOpaqueFDDescriptor* descriptor);
 
     RefCountedVkHandle<VkDeviceMemory>* GetVkDeviceMemory() const;
