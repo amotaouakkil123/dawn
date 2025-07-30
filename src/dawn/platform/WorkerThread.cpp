@@ -45,7 +45,7 @@ public:
 
     void Wait() override { mWaitableEventImpl->Wait(); }
 
-    bool IsComplete() override { return mWaitableEventImpl->IsCompelte(); }
+    bool IsComplete() override { return mWaitableEventImpl->IsComplete(); }
 
     std::shared_ptr<AsyncWaitableEventImpl> GetWaitableEventImpl() const {
         return mWaitableEventImpl;
