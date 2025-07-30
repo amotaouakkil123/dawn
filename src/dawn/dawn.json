@@ -3921,7 +3921,7 @@
             {"value": 71, "name": "texture component swizzle descriptor", "tags": ["dawn"]},
             {"value": 72, "name": "shared texture memory D3D11 begin state", "tags": ["dawn", "native"]},
             {"value": 73, "name": "dawn consume adapter descriptor", "tags": ["dawn"]},
-            {"value": 74, "name": "shared teture memory o h native buffer descriptor", "tags": ["dawn", "native"]},
+            {"value": 74, "name": "shared texture memory o h native buffer descriptor", "tags": ["dawn", "native"]},
             {"value": 75, "name": "surface source o h native window"}
         ]
     },

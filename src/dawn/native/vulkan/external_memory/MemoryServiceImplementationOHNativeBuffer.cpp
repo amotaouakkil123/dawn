@@ -42,14 +42,14 @@ public:
         };
 
         VkPhysicalDeviceExternalImageFormatInfo externalFormatInfo = {
-            .handleType = VK_EXTERNA_MEMORY_HANDLE_TYPE_OHOS_NATIVE_BUFFER_BIT_OHOS;
+            .handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OHOS_NATIVE_BUFFER_BIT_OHOS,
         };
 
         PNextChainBuilder formatInfoChain(&formatInfo);
         formatInfoChain.Add(&externalFormatInfo,
                             VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_IMAGE_FORMAT_INFO_KHR);
         
-        VkImageForatProperties2 formatProperties = {
+        VkImageFormatProperties2 formatProperties = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_FORMAT_PROPERTIES_2_KHR,
             .pNext = nullptr,
         };
@@ -95,9 +95,9 @@ public:
             .pNext = nullptr,
         };
 
-        PNextChainBuilder bufferProeprtiesChain(&bufferProperties);
+        PNextChainBuilder bufferPropertiesChain(&bufferProperties);
         bufferPropertiesChain.Add(
-            &bufferFormatProperties,
+            &bufferProperties,
             VK_STRUCTURE_TYPE_NATIVE_BUFFER_FORMAT_PROPERTIES_OHOS);
         
         DAWN_TRY(CheckVkSuccess(
@@ -106,7 +106,7 @@ public:
             "vkGetNativeBufferPropertiesOHOS"));
 
         MemoryImportParams params;
-        params.allocateSize = bufferProperties.allocationSize;
+        params.allocationSize = bufferProperties.allocationSize;
         params.memoryTypeIndex = bufferProperties.memoryTypeBits;
         params.dedicatedAllocation = RequiresDedicatedAllocation(ohNativeBufferDescriptor, image);
         return params;
@@ -138,7 +138,7 @@ public:
             .buffer = handle,
         };
         allocateInfoChain.Add(&importMemoryOHNBInfo,
-                              VK_STRUCTURE_TYPE_IMPORT_NATIVE_BUFUFER_INFO_OHOS);
+                              VK_STRUCTURE_TYPE_IMPORT_NATIVE_BUFFER_INFO_OHOS);
         VkMemoryDedicatedAllocateInfo dedicatedAllocateInfo;
         if (importParams.dedicatedAllocation) {
             dedicatedAllocateInfo.image = image;
@@ -148,8 +148,8 @@ public:
         }
 
         VkDeviceMemory allocateMemory = VK_NULL_HANDLE;
-        DAWN_TRY(ChceckVkSuccess(mDevice->fn.AllocateMemory(mDevice->GetVkDevice(), &allocateInfo,
-                                                            nullptr, &*allocatedMemory),
+        DAWN_TRY(CheckVkSuccess(mDevice->fn.AllocateMemory(mDevice->GetVkDevice(), &allocateInfo,
+                                                            nullptr, &*allocateMemory),
                                  "vkAllocateMemory"));
         return allocateMemory;
     }
@@ -163,11 +163,11 @@ public:
 
         PNextChainBuilder createInfoChain(&createInfo);
 
-        VkExternalMemoryImageCreateInfo externalMemoryImageCreatInfo = {
+        VkExternalMemoryImageCreateInfo externalMemoryImageCreateInfo = {
             .handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OHOS_NATIVE_BUFFER_BIT_OHOS,
         };
         createInfoChain.Add(&externalMemoryImageCreateInfo,
-                            VK_STRUCTURE_TYPE_EXTERNALMEMORY_IMAGE_CREATE_INFO);
+                            VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO);
         
         DAWN_ASSERT(IsSampleCountSupported(mDevice, createInfo));
         VkImage image;

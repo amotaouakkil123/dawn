@@ -90,6 +90,7 @@ class SharedTextureMemory final : public SharedTextureMemoryBase {
 
     // Populated if this instance was created from an AHardwareBuffer.
     YCbCrVkDescriptor mYCbCrAHBInfo;
+    YCbCrVkDescriptor mYCbCrOHOSInfo;
 };
 
 }  // namespace dawn::native::vulkan

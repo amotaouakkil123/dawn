@@ -132,7 +132,7 @@ LogMessage::~LogMessage() {
     __android_log_print(androidPriority, "Dawn", "%s: %s\n", severityName, fullMessage.c_str());
 #elif DAWN_PLATFORM_IS(OHOS)
     auto ohosPriority = OhosLogPriority(mSeverity);
-    OH_LOG_PRINT(LOG_APP, ohosPriority, LOG_DOMAIN, "Dawn", "%{public}s: %{public}s", severityName,
+    OH_LOG_Print(LOG_APP, ohosPriority, LOG_DOMAIN, "Dawn", "%{public}s: %{public}s", severityName,
                  fullMessage.c_str());
 #else
     FILE* outputStream = stdout;

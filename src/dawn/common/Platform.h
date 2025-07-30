@@ -65,7 +65,7 @@
 #define DAWN_PLATFORM_IS_POSIX 1
 #if defined(__ANDROID__)
 #define DAWN_PLATFORM_IS_ANDROID 1
-#if defined(__OHOS__)
+#elif defined(__OHOS__)
 #define DAWN_PLATFORM_IS_OHOS 1
 #elif defined(DAWN_OS_CHROMEOS)
 #define DAWN_PLATFORM_IS_CHROMEOS 1

@@ -77,7 +77,7 @@ Service::Service(Device* device) {
 #endif  // DAWN_PLATFORM_IS(ANDROID)
 
 #if DAWN_PLATFORM_IS(OHOS)
-    if (CheckOHNAtiveBufferSupport(device->GetDeviceInfo())) {
+    if (CheckOHNativeBufferSupport(device->GetDeviceInfo())) {
         mServiceImpls[ExternalImageType::OHNativeBuffer] = CreateOHNativeBufferService(device);
     }
 #endif  // DAWN_PLATFORM_IS(OHOS)

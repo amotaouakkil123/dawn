@@ -137,6 +137,7 @@ enum class DeviceExt {
     ExternalMemoryHost,
     ExternalSemaphoreFD,
     ExternalSemaphoreZirconHandle,
+    ExternalMemoryOHNativeBuffer,
 
     EnumCount,
 };

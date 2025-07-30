@@ -800,7 +800,7 @@ ResultOrError<Ref<SharedTextureMemory>> SharedTextureMemory::Create(
                 "OH_NativeBuffer with external sampler must have non-zero external format.");
             
             vkFormat = VK_FORMAT_UNDEFINED;
-            externalFormatOHOS.externalFOrmat = bufferFormatProperties.externalFormat;
+            externalFormatOHOS.externalFormat = bufferFormatProperties.externalFormat;
             properties.format = wgpu::TextureFormat::External;
         } else {
             vkFormat = bufferFormatProperties.format;
@@ -812,7 +812,7 @@ ResultOrError<Ref<SharedTextureMemory>> SharedTextureMemory::Create(
         yCbCrOHOSInfo.externalFormat = externalFormatOHOS.externalFormat;
         yCbCrOHOSInfo.vkFormat = vkFormat;
         yCbCrOHOSInfo.vkYCbCrModel = bufferFormatProperties.suggestedYcbcrModel;
-        yCbCrOHOSInfo.vkYCbCrRange = bufferFormatPropeties.suggestedYcbcrRange;
+        yCbCrOHOSInfo.vkYCbCrRange = bufferFormatProperties.suggestedYcbcrRange;
         yCbCrOHOSInfo.vkComponentSwizzleRed =
             bufferFormatProperties.samplerYcbcrConversionComponents.r;
         yCbCrOHOSInfo.vkComponentSwizzleGreen = 
@@ -835,11 +835,13 @@ ResultOrError<Ref<SharedTextureMemory>> SharedTextureMemory::Create(
 
         yCbCrOHOSInfo.forceExplicitReconstruction =
             formatFeatures &
-            VK_FORMAT_FEATURE_SAMPLED_IMAGE_YCBCR_CONVERSION_LINEAR_CHROMA_RECONSTRUCTION_EXPLICIT_BIT;
+            VK_FORMAT_FEATURE_SAMPLED_IMAGE_YCBCR_CONVERSION_CHROMA_RECONSTRUCTION_EXPLICIT_BIT;
     }
 
     const Format* internalFormat = nullptr;
-    DAWN_TRY_ASSIGN(internalFormat->IsMultiPlanar(),
+    DAWN_TRY_ASSIGN(internalFormat, device->GetInternalFormat(properties.format));
+
+    DAWN_INVALID_IF(internalFormat->IsMultiPlanar(),
                     "Multi-planar OH_NativeBuffer not supported yet.");
 
     // Create the SharedTextureMemory object
@@ -882,7 +884,7 @@ ResultOrError<Ref<SharedTextureMemory>> SharedTextureMemory::Create(
                 wgpu::TextureUsage::StorageBinding;
             const bool mayNeedViewReinterpretation =
                 (properties.usage & kUsageRequiringView) != 0 && !compatibleViewFormats.empty();
-            const bool needsRGBA8UnormStoragePolyfill =
+            const bool needsBGRA8UnormStoragePolyfill =
                 properties.format == wgpu::TextureFormat::BGRA8Unorm &&
                 (properties.usage & wgpu::TextureUsage::StorageBinding);
             if (mayNeedViewReinterpretation || needsBGRA8UnormStoragePolyfill) {
@@ -900,7 +902,7 @@ ResultOrError<Ref<SharedTextureMemory>> SharedTextureMemory::Create(
                     // Set the list of view formats the image can be compatible with.
                     DAWN_ASSERT(compatibleViewFormats.size() == 1u);
                     viewFormats[0] = vkFormat;
-                    viewFormats[1] = VulkanImageFormat(device, comptaibleViewFormats[0]->format);
+                    viewFormats[1] = VulkanImageFormat(device, compatibleViewFormats[0]->format);
                     imageFormatListInfo.viewFormatCount = 2;
                     imageFormatListInfo.pViewFormats = viewFormats.data();
                 }
@@ -1329,7 +1331,7 @@ ResultOrError<FenceAndSignalValue> SharedTextureMemory::EndAccessImpl(
         desc.handle = handle.Get();
 
         if (handle.Get() < 0) {
-            return FenceAndSignalValue({}, std::numeric_limits<uint64_t>::max());
+            return FenceAndSignalValue{{}, std::numeric_limits<uint64_t>::max()};
         }
 
         DAWN_TRY_ASSIGN(fence,
