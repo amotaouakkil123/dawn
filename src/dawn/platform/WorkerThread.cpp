@@ -15,7 +15,7 @@ public:
 
     void Wait() {
         std::unique_lock<std::mutex> lock(mMutex);
-        mCondition.wait(lock, [this] { return mIsComplete; })
+        mCondition.wait(lock, [this] { return mIsComplete; });
     }
 
     bool IsComplete() {
